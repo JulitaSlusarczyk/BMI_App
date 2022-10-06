@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'bmi_floating_button.dart';
 
 void main() {
   runApp(const MyApp());
@@ -30,9 +31,9 @@ class _MyHomePageState extends State<MyHomePage> {
   late TextEditingController _heightInputController;
   late TextEditingController _weightInputController;
   bool imperialUnits = false;
+  bool visibilityError = false;
   double height = 0;
   double weight = 0;
-
 
   @override
   void initState() {
@@ -47,68 +48,12 @@ class _MyHomePageState extends State<MyHomePage> {
     _weightInputController.dispose();
     super.dispose();
   }
-
-   String calculateBMI(double height, double weight){
-    if(imperialUnits){
-      return ((weight/(height*height))*703).toStringAsFixed(2);
-    }
-    height = height/100;
-    return (weight/(height*height)).toStringAsFixed(2);
-  }
-
-  Widget resultBMI (double bmi){
-    String result = '';
-    if(bmi<16){
-      result = 'Wygłodzenie';
-    } else if(bmi>=16 && bmi<17){
-      result = 'Wychudzenie';
-    } else if(bmi>=17 && bmi<18.5){
-      result = 'Niedowaga';
-    } else if(bmi>=18.5 && bmi<25){
-      result = 'Waga Prawidłowa';
-    } else if(bmi>=25 && bmi<30){
-      result = 'Nadwaga';
-    } else if(bmi>=30 && bmi<35){
-      result = 'Otyłość I Stopnia';
-    } else if(bmi>=35 && bmi<40){
-      result = 'Otyłość II Stopnia';
+  parseValue(String value){
+    if(double.tryParse(value)!=null){
+      return double.parse(value);
     } else {
-      result = 'Otyłość III Stopnia';
+      return null;
     }
-    return Row(
-      children: [
-        IconButton(
-          icon: const Icon(Icons.info),
-          onPressed: (){
-              showDialog(
-              context: context,
-              builder: (BuildContext context){
-                return AlertDialog(
-                  content: const Text(
-                      'BMI:\n\n'
-                          'Wygłodzenie  <16\n'
-                          'Wychudzenie  >16 & <17\n'
-                          'Niedowaga  >17 & <18.5\n'
-                          'Waga prawidłowa  >18.5 & <25\n'
-                          'Nadwaga  >25 & <30\n'
-                          'Otyłość I Stopnia >30 & <35\n'
-                          'Otyłość II Stopnia >35 & <40\n'
-                          'Otyłość III Stopnia >40'
-                  ),
-                  actions: <Widget>[
-                    TextButton(
-                        onPressed: (){
-                          Navigator.pop(context);
-                        },
-                        child: const Text('OK'))
-                  ],
-                );
-              }
-          );},
-        ),
-        Text(result),
-      ],
-    );
   }
 
   @override
@@ -125,7 +70,7 @@ class _MyHomePageState extends State<MyHomePage> {
               margin: const EdgeInsets.all(8),
               child: TextField(
                 controller: _heightInputController,
-                onChanged: (value) => height = double.parse(value),
+                onChanged: (value) => parseValue(value)==null ? setState( () => visibilityError = true) : setState((){height = parseValue(value); visibilityError = false;}),
                 decoration: InputDecoration(
                   border: const OutlineInputBorder(),
                   labelText: 'Podaj swój wzrost (w ${imperialUnits ? 'calach' : 'cm'})',
@@ -136,7 +81,7 @@ class _MyHomePageState extends State<MyHomePage> {
               margin: const EdgeInsets.all(8),
               child: TextField(
                 controller: _weightInputController,
-                onChanged: (value) => weight = double.parse(value),
+                onChanged: (value) => parseValue(value)==null ? setState( () => visibilityError = true) : setState((){weight = parseValue(value); visibilityError = false;}),
                 decoration: InputDecoration(
                   border: const OutlineInputBorder(),
                   labelText: 'Podaj swoją wagę (w ${imperialUnits ? 'funtach' : 'kg'})',
@@ -149,44 +94,19 @@ class _MyHomePageState extends State<MyHomePage> {
                 const Text('kg/cm'),
                 Switch(
                   value: imperialUnits,
-                  onChanged:(value){
-                    setState(()
-                    {
-                      imperialUnits = value;
-                    }
-                    );
-                  },
+                  onChanged:(value) => setState( () => imperialUnits = value ),
                 ),
                 const Text('funty/cale'),
               ],
-            )
+            ),
+            Visibility(
+              visible: visibilityError,
+              child: const Text("Wprowadzono niepoprawne dane", style: TextStyle(color: Colors.red)),
+            ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          await showDialog<void>(
-              context: context,
-              builder: (BuildContext context){
-                String bmi = calculateBMI(height, weight);
-                return AlertDialog(
-                  title: Text('Twoje BMI wynosi $bmi'),
-                  content: resultBMI(double.parse(bmi)),
-                  actions: <Widget>[
-                    TextButton(
-                        onPressed: (){
-                          Navigator.pop(context);
-                        },
-                        child: const Text('OK'))
-                  ],
-                );
-             }
-          );
-        },
-        label: const Text(
-          'Sprawdź swoje BMI'
-        ),
-      ),
+      floatingActionButton: BmiFloatingActionButton(height: height, weight: weight, imperialUnits: imperialUnits),
     );
   }
 }
